@@ -65,7 +65,7 @@ namespace Lab2
       }
 
       consumeSemicolon();
-      return new VarStatement(name.Value, init);
+      return new VarStatement(name.Value, init, name.Row, name.Column);
     }
 
     private Statement parseStatement()
@@ -75,7 +75,7 @@ namespace Lab2
         {TokenType.IF,    parseIf                               },
         {TokenType.WHILE, parseWhile                            },
         {TokenType.PRINT, parsePrint                            },
-        {TokenType.LFBR,  () => new BlockStatement(parseBlock())},
+        {TokenType.LFBR,  () => new BlockStatement(parseBlock(), prev().Row, prev().Column)},
       };
 
       foreach (var (type, func) in dict)
@@ -99,7 +99,7 @@ namespace Lab2
         elseStmt = parseStatement();
       }
 
-      return new IfStatement(expr, ifStmt, elseStmt);
+      return new IfStatement(expr, ifStmt, elseStmt, prev().Row, prev().Column);
     }
 
     private Statement parseWhile()
@@ -110,7 +110,7 @@ namespace Lab2
       
       Statement block = parseStatement();
 
-      return new WhileStatement(expr, block);
+      return new WhileStatement(expr, block, prev().Row, prev().Column);
     }
 
     private Statement parsePrint()
@@ -118,7 +118,7 @@ namespace Lab2
       Expression expr = parseExpression();
       consumeSemicolon();
 
-      return new PrintStatement(expr);
+      return new PrintStatement(expr, prev().Row, prev().Column);
     }
     private List<Statement> parseBlock()
     {
@@ -140,7 +140,7 @@ namespace Lab2
     {
       Expression expr = parseExpression();
       consumeSemicolon();
-      return new ExpressionStatement(expr);
+      return new ExpressionStatement(expr, prev().Row, prev().Column);
     }
 
     private Expression parseExpression()
@@ -314,7 +314,7 @@ namespace Lab2
         return expr;
       }
 
-      throw new Exception($"Syntax error [{peek().Row}:{peek().Column}]: Expression expected");
+      throw new Exception($"Syntax error [{prev().Row}:{prev().Column}]: Expression expected");
     }
   }
 }
