@@ -7,6 +7,7 @@ namespace Lab1
       PRINT, IF, ELSE, WHILE,
       
       PLUS, MINUS, MUL, DIV, // + - * /
+      INCR, DECR, // ++ --
       EQ, EQEQ, NON, NONEQ, // = == ! !=
       LT, RT, LTEQ, RTEQ, // > < >= <=
       AND, OR, // && ||

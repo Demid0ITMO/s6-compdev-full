@@ -23,6 +23,8 @@ namespace Lab1
       [">="] = TokenType.RTEQ,
       ["&&"] = TokenType.AND,
       ["||"] = TokenType.OR,
+      ["++"] = TokenType.INCR,
+      ["--"] = TokenType.DECR,
       ["+"] = TokenType.PLUS,
       ["-"] = TokenType.MINUS,
       ["*"] = TokenType.MUL,
