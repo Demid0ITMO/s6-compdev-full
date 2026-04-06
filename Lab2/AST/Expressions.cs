@@ -16,6 +16,12 @@ namespace Lab2
     public StringExpression(string val) => value = val;
   }
 
+  public class BooleanExpression : Expression
+  {
+    public bool value { get; }
+    public BooleanExpression(bool val) => value = val;
+  }
+
   public class VariableExpression : Expression
   {
     public string name { get; }

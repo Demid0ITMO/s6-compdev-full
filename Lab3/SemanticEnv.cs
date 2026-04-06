@@ -11,7 +11,7 @@ namespace Lab3
       vars = [];
     }
 
-    public bool defineVar(string name, bool isInitialized)
+    public bool defineVar(string name, bool isInitialized, DataType? type)
     {
       if (vars.ContainsKey(name))
       {
@@ -20,7 +20,8 @@ namespace Lab3
 
       vars[name] = new VarInfo {
         name = name,
-        isInited = isInitialized
+        isInited = isInitialized,
+        type = type ?? DataType.UNKNOWN
       };
       
       return true;
@@ -36,9 +37,10 @@ namespace Lab3
       return vars.TryGetValue(name, out var symbol) ? symbol : (parent?.getVar(name));
     }
 
-    public void setInited(string name)
+    public void setInited(string name, DataType type)
     {
       getVar(name)?.isInited = true;
+      getVar(name)?.type = type;
     }
 
     public IEnumerable<VarInfo> GetLocalVariables()
@@ -50,6 +52,7 @@ namespace Lab3
   public class VarInfo
   {
     public string name { get; set; } = "";
+    public DataType type { get; set; } = DataType.UNKNOWN;
     public bool isInited { get; set; }
     public bool isUsed { get; set; }
   }

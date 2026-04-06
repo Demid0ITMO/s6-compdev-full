@@ -75,7 +75,11 @@ namespace Lab2
         {TokenType.IF,    parseIf                               },
         {TokenType.WHILE, parseWhile                            },
         {TokenType.PRINT, parsePrint                            },
-        {TokenType.LFBR,  () => new BlockStatement(parseBlock(), prev().Row, prev().Column)},
+        {TokenType.LFBR,  () => {
+          int r = prev().Row;
+          int c = prev().Column;
+          return new BlockStatement(parseBlock(), r, c);
+        }},
       };
 
       foreach (var (type, func) in dict)
@@ -88,6 +92,8 @@ namespace Lab2
 
     private Statement parseIf()
     {
+      int r = prev().Row;
+      int c = prev().Column;
       consume(TokenType.LBR, "'(' expected");
       Expression expr = parseExpression();
       consume(TokenType.RBR, "')' expected");
@@ -99,26 +105,30 @@ namespace Lab2
         elseStmt = parseStatement();
       }
 
-      return new IfStatement(expr, ifStmt, elseStmt, prev().Row, prev().Column);
+      return new IfStatement(expr, ifStmt, elseStmt, r, c);
     }
 
     private Statement parseWhile()
     {
+      int r = prev().Row;
+      int c = prev().Column;
       consume(TokenType.LBR, "'(' expected");
       Expression expr = parseExpression();
       consume(TokenType.RBR, "')' expected");
       
       Statement block = parseStatement();
 
-      return new WhileStatement(expr, block, prev().Row, prev().Column);
+      return new WhileStatement(expr, block, r, c);
     }
 
     private Statement parsePrint()
     {
+      int r = prev().Row;
+      int c = prev().Column;
       Expression expr = parseExpression();
       consumeSemicolon();
 
-      return new PrintStatement(expr, prev().Row, prev().Column);
+      return new PrintStatement(expr, r, c);
     }
     private List<Statement> parseBlock()
     {
@@ -138,9 +148,11 @@ namespace Lab2
 
     private Statement parseExpressionStatement()
     {
+      int r = peek().Row;
+      int c = peek().Column;
       Expression expr = parseExpression();
       consumeSemicolon();
-      return new ExpressionStatement(expr, prev().Row, prev().Column);
+      return new ExpressionStatement(expr, r, c);
     }
 
     private Expression parseExpression()
@@ -271,6 +283,21 @@ namespace Lab2
 
     private Expression parsePrimary()
     {
+      if (match(TokenType.STRING))
+      {
+        return new StringExpression(prev().Value);
+      }
+
+      if (match(TokenType.FBOOL))
+      {
+        return new BooleanExpression(false);
+      }
+
+      if (match(TokenType.TBOOL))
+      {
+        return new BooleanExpression(true);
+      }
+      
       if (match(TokenType.NUMBER))
       {
         double value = double.Parse(prev().Value, System.Globalization.CultureInfo.InvariantCulture);

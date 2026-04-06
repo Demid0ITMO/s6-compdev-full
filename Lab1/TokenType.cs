@@ -15,5 +15,7 @@ namespace Lab1
       LBR, RBR, // ()
       LFBR, RFBR, // {}
       SEMICOLON, // ;
+
+      TBOOL, FBOOL
   }
 }

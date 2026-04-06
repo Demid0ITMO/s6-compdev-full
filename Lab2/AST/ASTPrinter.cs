@@ -23,17 +23,17 @@ namespace Lab2
       switch (node)
       {
         case VarStatement v:
-          Console.WriteLine($"VarStatement: {v.name}");
+          Console.WriteLine($"VarStatement [{v.row}:{v.column}]: {v.name}");
           if (v.initializer != null) PrintNode(v.initializer, childIndent, true);
           break;
 
         case PrintStatement p:
-          Console.WriteLine("PrintStatement");
+          Console.WriteLine($"PrintStatement [{p.row}:{p.column}]");
           PrintNode(p.expression, childIndent, true);
           break;
 
         case IfStatement i:
-          Console.WriteLine("IfStatement");
+          Console.WriteLine($"IfStatement [{i.row}:{i.column}]");
           PrintNode(i.condition, childIndent, false);
           PrintNode(i.thenBranch, childIndent, i.elseBranch == null);
 
@@ -41,18 +41,18 @@ namespace Lab2
           break;
 
         case WhileStatement w:
-          Console.WriteLine("WhileStatement");
+          Console.WriteLine($"WhileStatement [{w.row}:{w.column}]");
           PrintNode(w.condition, childIndent, false);
           PrintNode(w.body, childIndent, true);
           break;
 
         case BlockStatement b:
-          Console.WriteLine("BlockStatement");
+          Console.WriteLine($"BlockStatement [{b.row}:{b.column}]");
           for (int j = 0; j < b.statements.Count; j++) PrintNode(b.statements[j], childIndent, j == b.statements.Count - 1);
           break;
 
         case ExpressionStatement e:
-          Console.WriteLine("ExpressionStatement");
+          Console.WriteLine($"ExpressionStatement [{e.row}:{e.column}]");
           PrintNode(e.expression, childIndent, true);
           break;
 
@@ -78,6 +78,14 @@ namespace Lab2
 
         case VariableExpression varExpr:
           Console.WriteLine($"Variable: {varExpr.name}");
+          break;
+
+        case StringExpression str:
+          Console.WriteLine($"String: {str.value}");
+          break;
+
+        case BooleanExpression bl:
+          Console.WriteLine($"Boolean: {bl.value}");
           break;
 
         default:

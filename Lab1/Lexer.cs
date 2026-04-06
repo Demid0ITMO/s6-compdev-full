@@ -1,4 +1,6 @@
 
+using System.Runtime.CompilerServices;
+
 namespace Lab1
 {
   public class Lexer(string input)
@@ -12,7 +14,9 @@ namespace Lab1
       ["print"] = TokenType.PRINT,
       ["if"] = TokenType.IF,
       ["else"] = TokenType.ELSE,
-      ["while"] = TokenType.WHILE
+      ["while"] = TokenType.WHILE,
+      ["false"] = TokenType.FBOOL,
+      ["true"] = TokenType.TBOOL
     };
 
     private static readonly Dictionary<string, TokenType> operators = new()
@@ -89,6 +93,21 @@ namespace Lab1
           TokenType type = keywords.TryGetValue(s, out TokenType tt) ? tt : TokenType.ID; 
 
           ans.Add(new Token(type, s, startPos, startLine, startCol));
+          continue;
+        }
+
+        if (input[i] == '\"')
+        {
+          i++;
+          startPos = i;
+          startLine = line;
+          startCol = column;
+
+          while(i < input.Length && input[i] != '\"') i++;
+          string s = input[startPos..i];
+          column += s.Length;
+
+          ans.Add(new Token(TokenType.STRING, s, startPos, startLine, startCol));
           continue;
         }
 
