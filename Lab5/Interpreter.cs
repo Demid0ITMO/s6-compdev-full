@@ -1,31 +1,38 @@
-using System.Runtime.InteropServices.Marshalling;
 using Lab1;
 using Lab2;
+using Lab3;
 
-/**
-runtime env
-{
-dict
-get
-set
-}
-
-tree interpret
-{
-eval(expr);
-exec(stmt);
-}
-*/
 namespace Lab5
 {
 
+  public class FuncEnv(List<NameTypePair> ar, BlockStatement b)
+  {
+    public List<NameTypePair> args { get; set; } = ar;
+    public BlockStatement body { get; set; } = b;
+  }
+
   public class RuntimeEnv
   {
-    private Dictionary<String, Object?> variables = [];
+    private readonly RuntimeEnv? parent;
+    
+    private readonly Dictionary<String, Object?> variables = [];
+
+    private readonly Dictionary<String, FuncEnv> functions = [];
+
+    public RuntimeEnv(RuntimeEnv? par = null)
+    {
+      parent = par;
+    }
 
     public Object? getVar(String name)
     {
-      return variables[name];
+      variables.TryGetValue(name, out var variable);
+      if (variable == null)
+      {
+        if (parent == null) return null;
+        else return parent.getVar(name);
+      }
+      else return variable;
     }
 
     public void setVar(String name, Object? value)
@@ -33,9 +40,30 @@ namespace Lab5
       variables[name] = value;
     }
 
+    public FuncEnv? getFunc(String name)
+    {
+      functions.TryGetValue(name, out var func);
+      if (func == null)
+      {
+        if (parent == null) return null;
+        else return parent.getFunc(name);
+      }
+      else return func;
+    }
+
+    public void setFunc(String name, List<NameTypePair> args, BlockStatement body)
+    {
+      functions[name] = new FuncEnv(args, body);
+    }
+
     public Dictionary<String, Object?> getDict()
     {
       return variables;
+    }
+
+    public Dictionary<String, FuncEnv> getFuncDict()
+    {
+      return functions;
     }
   }
 
@@ -50,7 +78,7 @@ namespace Lab5
         case NumberExpression n: return n.value;
         case StringExpression s: return s.value;
         case BooleanExpression b: return b.value;
-        case VariableExpression v: return runtimeEnv.getVar(v.name) ?? new object();
+        case VariableExpression v: return runtimeEnv.getVar(v.name) ?? throw new Exception($"Unable to find variable '{v.name}'");
         case AssignExpression a: 
           runtimeEnv.setVar(a.name, evaluateExpression(a.value));
           return new object();
@@ -88,50 +116,92 @@ namespace Lab5
           {
             switch(b.oper)
             {
-              case TokenType.PLUS: return (Boolean)first || (Boolean)second;
-              case TokenType.MUL: return (Boolean)first && (Boolean)second;
               case TokenType.EQEQ: return (Boolean)first == (Boolean)second;
               case TokenType.NONEQ: return (Boolean)first != (Boolean)second;
               case TokenType.AND: return (Boolean)first && (Boolean)second;
               case TokenType.OR: return (Boolean)first || (Boolean)second;
             }
           }
-          return new object();
+          throw new Exception($"Unknown binary operation");
         case UnaryExpression u:
           var value = evaluateExpression(u.value);
           if (u.oper == TokenType.NON) return !(Boolean)value;
           if (u.oper == TokenType.MINUS) return -(Double)value;
-          return new object();
-        default: return new object();
+          throw new Exception($"Unknown unary operation");
+        case FuncCallExpression fc:
+          var func = runtimeEnv.getFunc(fc.name);
+          if (func == null) throw new Exception($"Function '{fc.name}' is not defined");
+          if (func.args.Count != fc.args.Count) throw new Exception($"Function '{fc.name}' called with {fc.args.Count} args, but expected {func.args.Count}");
+
+          var prevEnv = runtimeEnv;
+          var newEnv = new RuntimeEnv(prevEnv);
+          for(int i = 0; i < func.args.Count; i++) {
+            var arg = func.args[i];
+            var val = evaluateExpression(fc.args[i]);
+            if (arg.type == TokenType.BOOLTYPE) val = (bool)val;
+            if (arg.type == TokenType.STRTYPE) val = (string)val;
+            if (arg.type == TokenType.NUMTYPE) val = (double)val;
+            newEnv.setVar(arg.name, val);
+          }
+          runtimeEnv = newEnv;
+          object retVal = new object();
+          try {
+            executeStatement(func.body);
+          } catch (ReturnException e)
+          {
+            if (e.value != null) retVal = e.value;
+          } finally {
+            runtimeEnv = prevEnv;
+          }
+          return retVal;
+        default: throw new Exception($"Unknown expression");
       }
     }
 
     public void executeStatement(Statement stmt)
     {
-      switch(stmt)
+      try {
+        switch(stmt)
+        {
+          case ExpressionStatement e: 
+            evaluateExpression(e.expression);
+            return;
+          case PrintStatement p:
+            var o = evaluateExpression(p.expression);
+            Console.WriteLine(o);
+            return;
+          case VarStatement v:
+            if (v.initializer == null) runtimeEnv.setVar(v.name, null);
+            else runtimeEnv.setVar(v.name, evaluateExpression(v.initializer));
+            return;
+          case BlockStatement b:
+            foreach (Statement st in b.statements) executeStatement(st);
+            return;
+          case IfStatement i:
+            var cond = evaluateExpression(i.condition);
+            if ((Boolean)cond) executeStatement(i.thenBranch);
+            else if (i.elseBranch != null) executeStatement(i.elseBranch);
+            return;
+          case WhileStatement w:
+            while ((Boolean)evaluateExpression(w.condition)) executeStatement(w.body);
+            return;
+          case FuncDeclarationStatement fcs:
+            runtimeEnv.setFunc(fcs.name, fcs.args, fcs.body);
+            return;
+          case ReturnStatement r:
+            var re = new ReturnException();
+            if (r.expr != null) re.value = evaluateExpression(r.expr);
+            throw re;
+        }
+      } catch (Exception e)
       {
-        case ExpressionStatement e: 
-          evaluateExpression(e.expression);
-          return;
-        case PrintStatement p:
-          var o = evaluateExpression(p.expression);
-          Console.WriteLine(o);
-          return;
-        case VarStatement v:
-          if (v.initializer == null) runtimeEnv.setVar(v.name, null);
-          else runtimeEnv.setVar(v.name, evaluateExpression(v.initializer));
-          return;
-        case BlockStatement b:
-          foreach (Statement st in b.statements) executeStatement(st);
-          return;
-        case IfStatement i:
-          var cond = evaluateExpression(i.condition);
-          if ((Boolean)cond) executeStatement(i.thenBranch);
-          else if (i.elseBranch != null) executeStatement(i.elseBranch);
-          return;
-        case WhileStatement w:
-          while ((Boolean)evaluateExpression(w.condition)) executeStatement(w.body);
-          return;
+        if (e is ReturnException) throw e;
+        else
+        {
+          Console.ForegroundColor = ConsoleColor.Red;
+          Console.WriteLine($"[RUNTIME ERROR]: {e.Message}");
+          Console.ResetColor();
+        }
       }
     }
 
@@ -144,6 +214,11 @@ namespace Lab5
         else if (v.Value is String) ans += $"- String {v.Key} : \"{v.Value}\"\n";
         else if (v.Value is Boolean) ans += $"- Boolean {v.Key} : {v.Value}\n";
         else ans += $"- Unknown {v.Key} : {v.Value ?? "NULL"}\n";
+      }
+      ans += "}\nFunctions {\n";
+      foreach (var f in runtimeEnv.getFuncDict())
+      {
+        ans += $"{f.Key} - argc: {f.Value.args.Count}\n";
       }
       ans += "}";
       return ans;

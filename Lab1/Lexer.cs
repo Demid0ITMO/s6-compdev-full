@@ -16,7 +16,12 @@ namespace Lab1
       ["else"] = TokenType.ELSE,
       ["while"] = TokenType.WHILE,
       ["false"] = TokenType.FBOOL,
-      ["true"] = TokenType.TBOOL
+      ["true"] = TokenType.TBOOL,
+      ["fun"] = TokenType.FUNC,
+      ["return"] = TokenType.RETURN,
+      ["double"] = TokenType.NUMTYPE,
+      ["string"] = TokenType.STRTYPE,
+      ["boolean"] = TokenType.BOOLTYPE
     };
 
     private static readonly Dictionary<string, TokenType> operators = new()
@@ -41,7 +46,9 @@ namespace Lab1
       [")"] = TokenType.RBR,
       ["{"] = TokenType.LFBR,
       ["}"] = TokenType.RFBR,
-      [";"] = TokenType.SEMICOLON
+      [";"] = TokenType.SEMICOLON,
+      [","] = TokenType.COMMA,
+      [":"] = TokenType.DOUBLEDOT,
     };
 
     public List<Token> extract()
@@ -133,7 +140,6 @@ namespace Lab1
           ans.Add(new Token(tt1, s1, startPos, startLine, startCol));
           continue;
         }
-
 
         throw new Exception($"Lexer: Bad char '{input[i]}' at [{line}:{column}]");
       }

@@ -27,6 +27,23 @@ namespace Lab2
           if (v.initializer != null) PrintNode(v.initializer, childIndent, true);
           break;
 
+        case FuncDeclarationStatement fds:
+          string argLine = "";
+          for (int i = 0; i < fds.args.Count; i++)
+          {
+            argLine += fds.args[i];
+            if (i + 1 != fds.args.Count) argLine += ", ";
+          }
+
+          Console.WriteLine($"FuncDeclarationStatement [{fds.row}:{fds.column}]: {fds.name}({argLine})");
+          PrintNode(fds.body, childIndent, true);
+          break;
+
+        case ReturnStatement r:
+          Console.WriteLine($"ReturnStatement [{r.row}:{r.column}]");
+          if (r.expr != null) PrintNode(r.expr, childIndent, true);
+          break;
+
         case PrintStatement p:
           Console.WriteLine($"PrintStatement [{p.row}:{p.column}]");
           PrintNode(p.expression, childIndent, true);
@@ -86,6 +103,11 @@ namespace Lab2
 
         case BooleanExpression bl:
           Console.WriteLine($"Boolean: {bl.value}");
+          break;
+
+        case FuncCallExpression fc:
+          Console.WriteLine($"Function '{fc.name}' called with args");
+          for (int i = 0; i < fc.args.Count; i++) PrintNode(fc.args[i], childIndent, i + 1 == fc.args.Count);
           break;
 
         default:

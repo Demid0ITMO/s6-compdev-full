@@ -14,8 +14,12 @@ namespace Lab1
 
       LBR, RBR, // ()
       LFBR, RFBR, // {}
-      SEMICOLON, // ;
+      SEMICOLON, COMMA, // ; ,
 
-      TBOOL, FBOOL
+      TBOOL, FBOOL,
+
+      FUNC, RETURN,
+
+      DOUBLEDOT, NUMTYPE, STRTYPE, BOOLTYPE // :
   }
 }

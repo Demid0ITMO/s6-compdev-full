@@ -4,4 +4,6 @@
   <Project Path="Lab3/Lab3.csproj" />
   <Project Path="Lab4/Lab4.csproj" />
   <Project Path="Lab5/Lab5.csproj" />
+  <Project Path="Lab6/Lab6.csproj" />
+  <Project Path="Test/Test.csproj" />
 </Solution>

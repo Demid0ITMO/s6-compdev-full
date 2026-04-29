@@ -4,28 +4,57 @@ namespace Lab2
 {
   public abstract class Expression {}
 
+  public class TypedVariableExpression : VariableExpression
+  {
+    public TokenType type { get; }
+    public TypedVariableExpression(string name, TokenType type) : base(name)
+    {
+      this.type = type;
+    }
+  }
+
   public class NumberExpression : Expression
   {
     public double value { get; }
     public NumberExpression(double val) => value = val;
+
+    override public String ToString()
+    {
+      return $"{value}";
+    }
   }
 
   public class StringExpression : Expression
   {
     public string value { get; }
     public StringExpression(string val) => value = val;
+
+    override public String ToString()
+    {
+      return $"{value}";
+    }
   }
 
   public class BooleanExpression : Expression
   {
     public bool value { get; }
     public BooleanExpression(bool val) => value = val;
+
+    override public String ToString()
+    {
+      return $"{value}";
+    }
   }
 
   public class VariableExpression : Expression
   {
     public string name { get; }
     public VariableExpression(string name) => this.name = name;
+
+    override public String ToString()
+    {
+      return $"{name}";
+    }
   }
 
   public class BinaryExpression : Expression
@@ -40,6 +69,11 @@ namespace Lab2
       second = s;
       oper = op;
     }
+
+    override public String ToString()
+    {
+      return $"{first} {oper} {second}";
+    }
   }
 
   public class UnaryExpression : Expression
@@ -52,6 +86,11 @@ namespace Lab2
       oper = op;
       value = val;
     }
+
+    override public String ToString()
+    {
+      return $"{oper} {value}";
+    }
   }
 
   public class AssignExpression : Expression
@@ -63,6 +102,33 @@ namespace Lab2
     {
       this.name = name;
       value = val;
+    }
+
+    override public String ToString()
+    {
+      return $"{name} = {value}";
+    }
+  }
+
+  public class FuncCallExpression: Expression
+  {
+    public string name { get; }
+    public List<Expression> args { get; }
+    public FuncCallExpression(string name, List<Expression> args)
+    {
+      this.name = name;
+      this.args = args;
+    }
+
+    override public String ToString()
+    {
+      var argsLine = "";
+      for (int i = 0; i < args.Count; i++)
+      {
+        argsLine += args[i].ToString();
+        if (args.Count != i + 1) argsLine += ", ";
+      }
+      return $"{name} ({argsLine})";
     }
   }
 }

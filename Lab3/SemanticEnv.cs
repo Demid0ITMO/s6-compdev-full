@@ -13,7 +13,7 @@ namespace Lab3
 
     public bool defineVar(string name, bool isInitialized, DataType? type)
     {
-      if (vars.ContainsKey(name))
+      if (isVarDefined(name))
       {
         return false;
       }

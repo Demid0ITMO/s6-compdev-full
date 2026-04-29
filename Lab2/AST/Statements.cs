@@ -1,3 +1,5 @@
+using Lab1;
+
 namespace Lab2
 {
   public abstract class Statement(int r, int c)
@@ -22,11 +24,13 @@ namespace Lab2
   public class VarStatement : Statement
   {
     public string name { get; }
+    public TokenType postype { get; }
     public Expression? initializer { get; }
 
-    public VarStatement(string name, Expression? init, int r, int c) : base(r, c)
+    public VarStatement(string name, TokenType postype, Expression? init, int r, int c) : base(r, c)
     {
       this.name = name;
+      this.postype = postype;
       initializer = init;
     }
   }
@@ -59,6 +63,29 @@ namespace Lab2
     {
       condition = cond;
       body = block;
+    }
+  }
+
+  public class FuncDeclarationStatement: Statement
+  {
+    public string name { get; }
+    public List<NameTypePair> args { get; }
+    public BlockStatement body { get; }
+    
+    public FuncDeclarationStatement(string name, List<NameTypePair> args, BlockStatement body, int r, int c) : base(r, c)
+    {
+      this.name = name;
+      this.args = args;
+      this.body = body;
+    }
+  }
+
+  public class ReturnStatement: Statement
+  {
+    public Expression? expr { get; }
+    public ReturnStatement(Expression? expr, int r, int c) : base(r, c)
+    {
+      this.expr = expr;
     }
   }
 }

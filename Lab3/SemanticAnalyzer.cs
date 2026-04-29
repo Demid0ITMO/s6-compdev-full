@@ -3,8 +3,18 @@ using Lab2;
 
 namespace Lab3
 {
+  public class ReturnException: Exception
+  {
+    public object? value;
+  }
   public class SemanticAnalyzer
   {
+    readonly Dictionary<TokenType, DataType> typeCheck = new()
+    {
+        { TokenType.BOOLTYPE, DataType.BOOL },
+        { TokenType.NUMTYPE, DataType.NUM },
+        { TokenType.STRTYPE, DataType.STR }
+    };
     private class SemanticErr(string message, int row, int column)
     {
         public string msg { get; } = message;
@@ -38,7 +48,6 @@ namespace Lab3
       foreach (var statement in statements) {
         var t = visitStmt(statement);
         if (t == DataType.UNKNOWN) errs.Add(new SemanticErr("Unknown type", statement.row, statement.column));
-        else if (t != DataType.VOID) warns.Add(new SemanticErr($"Ignoring statement ouput {t}", statement.row, statement.column));
       }
       checkUnusedVariables(1, 1);
     }
@@ -53,6 +62,8 @@ namespace Lab3
             case BlockStatement b: analyzeBlockStatement(b); return DataType.VOID;
             case IfStatement i: analyzeIfStatement(i); return DataType.VOID;
             case WhileStatement w: analyzeWhileStatement(w); return DataType.VOID;
+            case FuncDeclarationStatement f: analyzeFuncDeclarationStatement(f); return DataType.VOID;
+            case ReturnStatement r: analyzeReturnStatement(r); return DataType.VOID;
             default:
                 errs.Add(new SemanticErr($"Unsupported statement {statement.GetType().Name}", statement.row, statement.column));
                 return DataType.VOID;
@@ -70,24 +81,57 @@ namespace Lab3
             case AssignExpression a: return analyzeAssignExpression(a, r, c);
             case BinaryExpression b: return analyzeBinaryExpression(b, r, c);
             case UnaryExpression u: return analyzeUnaryExpression(u, r, c);
+            case FuncCallExpression f: return analyzeFuncCallExpression(f, r, c);
             default:
                 errs.Add(new SemanticErr($"Unsupported expression {expression.GetType().Name}", r, c));
                 return DataType.VOID;
         }
     }
+    
+    private void analyzeFuncDeclarationStatement(FuncDeclarationStatement stmt)
+    {
+        if(!env.defineVar(stmt.name, false, null)) errs.Add(new SemanticErr($"Function '{stmt.name}' already defined", stmt.row, stmt.column));
+        else
+        {   
+            var prevEnv = env;
+            env = new SemanticEnv(prevEnv);
+            foreach(var arg in stmt.args) {
+                typeCheck.TryGetValue(arg.type, out DataType type);
+                env.defineVar(arg.name, true, type);
+            }
+            DataType ret = DataType.VOID;
+            try {
+                visitStmt(stmt.body);
+            } catch (ReturnException e)
+            {
+                if (e.value != null) ret = (DataType)e.value;
+            }
+            env = prevEnv;
+            env.setInited(stmt.name, ret);
+        }
+    }
+
+    private DataType analyzeReturnStatement(ReturnStatement stmt)
+    {
+        var e = new ReturnException();
+        e.value = DataType.VOID;
+        if (stmt.expr != null) e.value = visitExpr(stmt.expr, stmt.row, stmt.column);
+        throw e;
+    }
 
     private void analyzeVarStatement(VarStatement stmt)
     {
-        if (!env.defineVar(stmt.name, false, null))
+        if (!env.defineVar(stmt.name, false, stmt.postype == TokenType.VAR ? null : typeCheck[stmt.postype]))
         {
             if (env.getVar(stmt.name)?.isInited ?? false) errs.Add(new SemanticErr($"Var '{stmt.name}' already defined", stmt.row, stmt.column));
             else errs.Add(new SemanticErr($"Var '{stmt.name}' already declared", stmt.row, stmt.column));
         }
-
         else if (stmt.initializer != null)
         {
             var type = visitExpr(stmt.initializer, stmt.row, stmt.column);
-            env.setInited(stmt.name, type);
+            if (stmt.postype == TokenType.VAR) env.setInited(stmt.name, type);
+            else if (typeCheck[stmt.postype] == type) env.setInited(stmt.name, type);
+            else errs.Add(new SemanticErr($"Var must be {typeCheck[stmt.postype]}, but assigned value has type {type}", stmt.row, stmt.column));
         }
     }
 
@@ -110,7 +154,6 @@ namespace Lab3
         {
             var t = visitStmt(innerStatement);
             if (t == DataType.UNKNOWN) errs.Add(new SemanticErr("Unknown type", innerStatement.row, innerStatement.column));
-            else if (t != DataType.VOID) warns.Add(new SemanticErr("Ignoring function ouput", innerStatement.row, innerStatement.column));
         }
 
         checkUnusedVariables(stmt.row, stmt.column);
@@ -129,8 +172,6 @@ namespace Lab3
         }
 
         if (t != DataType.BOOL) errs.Add(new SemanticErr("Condition must be boolean", stmt.row, stmt.column));
-        if (t1 != DataType.VOID) warns.Add(new SemanticErr("Ignoring function ouput", stmt.thenBranch.row, stmt.thenBranch.column));
-        if (t2 != DataType.VOID) warns.Add(new SemanticErr("Ignoring function ouput", stmt.elseBranch?.row ?? stmt.row, stmt.elseBranch?.column ?? stmt.row));
     }
 
     private void analyzeWhileStatement(WhileStatement stmt)
@@ -139,7 +180,6 @@ namespace Lab3
         var t1 = visitStmt(stmt.body);
 
         if (t != DataType.BOOL) errs.Add(new SemanticErr("Condition must be boolean", stmt.row, stmt.column));
-        if (t1 != DataType.VOID) warns.Add(new SemanticErr("Ignoring function ouput", stmt.body.row, stmt.body.column));
     }
 
     private void checkUnusedVariables(int r, int c)
@@ -152,6 +192,20 @@ namespace Lab3
                 else warns.Add(new SemanticErr($"Var '{symbol.name}' is declared, but not used", r, c));
             }
         }
+    }
+
+    private DataType analyzeFuncCallExpression(FuncCallExpression expr, int r, int c)
+    {
+        var func = env.getVar(expr.name);
+
+        if (!env.isVarDefined(expr.name) || func == null) {
+            errs.Add(new SemanticErr($"Function '{expr.name}' is not declared", r, c));
+            return DataType.UNKNOWN;
+        }
+        
+        func.isUsed = true;
+        foreach(var arg in expr.args) visitExpr(arg, r, c);
+        return func.type;
     }
 
     private DataType analyzeVariableExpression(VariableExpression expr, int r, int c)
@@ -195,24 +249,12 @@ namespace Lab3
     {
         var t1 = visitExpr(expr.first, r, c);
         var t2 = visitExpr(expr.second, r, c);
-        
-        if (t1 == DataType.UNKNOWN || t2 == DataType.UNKNOWN) {
-            errs.Add(new SemanticErr("Operand has unknown type", r, c));
-            return DataType.UNKNOWN;
-        }
-        
-        if (t1 != t2) {
-            errs.Add(new SemanticErr($"Unsupported operation between '{t1}' and '{t2}'", r, c));
-            return DataType.UNKNOWN;
-        }
-
         List<TokenType> nums_to_num_opers = [
             TokenType.PLUS, 
             TokenType.MINUS, 
             TokenType.MUL, 
             TokenType.DIV,
         ];
-        if (t1 == DataType.NUM && nums_to_num_opers.Contains(expr.oper)) return DataType.NUM;
 
         List<TokenType> nums_to_bool_opers = [
             TokenType.EQEQ,
@@ -222,31 +264,90 @@ namespace Lab3
             TokenType.LTEQ,
             TokenType.RTEQ
         ];
-        if (t1 == DataType.NUM && nums_to_bool_opers.Contains(expr.oper)) return DataType.BOOL;
-
+        
         List<TokenType> strs_to_str_opers = [
             TokenType.PLUS,
         ];
-        if (t1 == DataType.STR && strs_to_str_opers.Contains(expr.oper)) return DataType.STR;
 
         List<TokenType> strs_to_bool_opers = [
             TokenType.EQEQ,
             TokenType.NONEQ,
         ];
-        if (t1 == DataType.STR && strs_to_bool_opers.Contains(expr.oper)) return DataType.BOOL;
 
         List<TokenType> bools_to_bool_opers = [
             TokenType.AND,
             TokenType.OR,
-            TokenType.PLUS,
-            TokenType.MUL,
             TokenType.EQEQ,
             TokenType.NONEQ
-        ];     
-        if (t1 == DataType.BOOL && bools_to_bool_opers.Contains(expr.oper)) return DataType.BOOL;
+        ];
 
-        errs.Add(new SemanticErr($"Unsupported operation between '{t1}' and '{t2}'", r, c));
-        return DataType.UNKNOWN;
+        if (t1 != DataType.UNKNOWN && t2 != DataType.UNKNOWN) {
+            if (t1 != t2) {
+                errs.Add(new SemanticErr($"Unsupported operation {expr.oper} between '{t1}' and '{t2}'", r, c));
+                return DataType.UNKNOWN;
+            }
+
+            if (t1 == DataType.NUM && nums_to_num_opers.Contains(expr.oper)) return DataType.NUM;
+            if (t1 == DataType.NUM && nums_to_bool_opers.Contains(expr.oper)) return DataType.BOOL;
+            if (t1 == DataType.STR && strs_to_str_opers.Contains(expr.oper)) return DataType.STR;
+            if (t1 == DataType.STR && strs_to_bool_opers.Contains(expr.oper)) return DataType.BOOL;     
+            if (t1 == DataType.BOOL && bools_to_bool_opers.Contains(expr.oper)) return DataType.BOOL;
+
+            errs.Add(new SemanticErr($"Unsupported operation between '{t1}' and '{t2}'", r, c));
+            return DataType.UNKNOWN;
+        } else {
+            var T1 = (t1 == DataType.UNKNOWN) ? ((t2 == DataType.UNKNOWN) ? DataType.UNKNOWN : t2) : t1;
+            if (T1 == DataType.UNKNOWN)
+            {
+                int num = 0, str = 0, bol = 0;
+                if (nums_to_num_opers.Contains(expr.oper)) num = 1;
+                if (nums_to_bool_opers.Contains(expr.oper)) bol = 1;
+                if (strs_to_str_opers.Contains(expr.oper)) str = 1;
+                if (strs_to_bool_opers.Contains(expr.oper)) bol = 1;
+                if (bools_to_bool_opers.Contains(expr.oper)) bol = 1;
+
+                if (num + str + bol == 1)
+                {
+                    if (num == 1) return DataType.NUM;
+                    if (str == 1) return DataType.STR;
+                    if (bol == 1) return DataType.BOOL;
+                }
+
+                var message = "Can not solve expression type. Possible types are: ";
+                if (num != 0) message += $"'{DataType.NUM}'";
+                if (str != 0) {
+                    if (num != 0) message += ", ";
+                    message += $"'{DataType.STR}'";
+                }
+                if (bol != 0) {
+                    if (str != 0) message += ", ";
+                    else if (num != 0) message += ", ";
+                    message += $"'{DataType.BOOL}'";
+                }
+                warns.Add(new SemanticErr(message, r, c));
+                return DataType.UNKNOWN;
+            } 
+            switch(T1)
+            {
+                case DataType.NUM:
+                    if (nums_to_num_opers.Contains(expr.oper)) return DataType.NUM;
+                    if (nums_to_bool_opers.Contains(expr.oper)) return DataType.BOOL;
+                    errs.Add(new SemanticErr($"Unsupported operation between '{t1}' and '{t2}'", r, c));
+                    return DataType.UNKNOWN;
+                case DataType.STR:
+                    if (strs_to_str_opers.Contains(expr.oper)) return DataType.STR;
+                    if (strs_to_bool_opers.Contains(expr.oper)) return DataType.BOOL;
+                    errs.Add(new SemanticErr($"Unsupported operation between '{t1}' and '{t2}'", r, c));
+                    return DataType.UNKNOWN;
+                case DataType.BOOL:
+                    if (bools_to_bool_opers.Contains(expr.oper)) return DataType.BOOL;
+                    errs.Add(new SemanticErr($"Unsupported operation between '{t1}' and '{t2}'", r, c));
+                    return DataType.UNKNOWN;
+                default:
+                    errs.Add(new SemanticErr($"Unsupported operation between '{t1}' and '{t2}'", r, c));
+                    return DataType.UNKNOWN;
+            }
+        }
     }
 
     private DataType analyzeUnaryExpression(UnaryExpression expr, int r, int c)
@@ -254,6 +355,7 @@ namespace Lab3
         var t = visitExpr(expr.value, r, c);
         if (expr.oper == TokenType.MINUS && t == DataType.NUM) return DataType.NUM;
         if (expr.oper == TokenType.NON && t == DataType.BOOL) return DataType.BOOL;
+        errs.Add(new SemanticErr($"Unsupported operation {expr.oper} with {t}", r, c));
         return DataType.UNKNOWN;
     }
   }

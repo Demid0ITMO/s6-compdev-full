@@ -2,6 +2,7 @@ using Lab1;
 
 namespace Lab2
 {
+  public record class NameTypePair(string name, TokenType type) {}
   public class Parser(List<Token> tokens)
   {
     private readonly List<Token> tokens = tokens;
@@ -19,6 +20,7 @@ namespace Lab2
 
     private bool match(TokenType type)
     {
+      if (i >= tokens.Count) return false; 
       bool res = tokens[i].TokType == type;
       if (res) i++;
       return res;
@@ -26,11 +28,26 @@ namespace Lab2
 
     private Token consume(TokenType type, string msg)
     {
-      bool res = tokens[i].TokType == type;
-      if (res) {
-        return tokens[i++];
+      if (i < tokens.Count) {
+        bool res = tokens[i].TokType == type;
+        if (res) {
+          return tokens[i++];
+        }
       }
-      else throw new Exception($"Syntax error [{tokens[i].Row}:{tokens[i].Column}]: {msg}");
+      throw new Exception($"Syntax error [{tokens[i].Row}:{tokens[i].Column}]: {msg}");
+    }
+
+    private Token consume(List<TokenType> types, string msg)
+    {
+      if (i < tokens.Count) {
+        foreach(var type in types) {
+          bool res = tokens[i].TokType == type;
+          if (res) {
+            return tokens[i++];
+          }
+        }
+      }
+      throw new Exception($"Syntax error [{tokens[i].Row}:{tokens[i].Column}]: {msg}");
     }
 
     private void consumeSemicolon()
@@ -52,11 +69,58 @@ namespace Lab2
 
     private Statement parseDeclaration()
     {
-      return match(TokenType.VAR) ? parseVar() : parseStatement();
+      if (match(TokenType.VAR) || match(TokenType.BOOLTYPE) || match(TokenType.NUMTYPE) || match(TokenType.STRTYPE)) return parseVar();
+      else if (match(TokenType.FUNC)) return parseFuncDeclaration();
+      else return parseStatement();
+    }
+
+    private Statement parseFuncDeclaration()
+    {
+      Token name = consume(TokenType.ID, "Func name expected");
+      int r = prev().Row;
+      int c = prev().Column;
+
+      consume(TokenType.LBR, "'(' expected");
+      var list = parseCommaSplitted();
+      List<NameTypePair> argsList;
+
+      try {
+        argsList = list
+          .Select(expr => (TypedVariableExpression)expr)
+          .Select(expr => new NameTypePair(expr.name, expr.type))
+          .ToList();
+      } catch (Exception)
+      {
+        throw new Exception($"Syntax error [{prev().Row}:{prev().Column}]: Incorrect argument declaration");
+      }
+
+      consume(TokenType.LFBR, "'{' expected");
+      
+      var body = new BlockStatement(parseBlock(), prev().Row, prev().Column);
+
+      return new FuncDeclarationStatement(name.Value, argsList, body, r, c);
+    }
+
+    private List<Expression> parseCommaSplitted()
+    {
+      List<Expression> ans = new();
+      
+      if (match(TokenType.RBR)) return ans;
+
+      while(tokens.Count > i)
+      {
+        var expr = parseExpression();
+        ans.Add(expr);
+        if (!match(TokenType.RBR)) consume(TokenType.COMMA, "',' expected");
+        else return ans;
+      }
+      consume(TokenType.RBR, "')' expected");
+      return ans;
     }
 
     private Statement parseVar()
     {
+      Token postype = prev();
       Token name = consume(TokenType.ID, "Var name expected");
       Expression? init = null;
       if (match(TokenType.EQ))
@@ -65,7 +129,7 @@ namespace Lab2
       }
 
       consumeSemicolon();
-      return new VarStatement(name.Value, init, name.Row, name.Column);
+      return new VarStatement(name.Value, postype.TokType, init, name.Row, name.Column);
     }
 
     private Statement parseStatement()
@@ -150,9 +214,12 @@ namespace Lab2
     {
       int r = peek().Row;
       int c = peek().Column;
+      bool flag = match(TokenType.RETURN);
+      if (flag && match(TokenType.SEMICOLON)) return new ReturnStatement(null, r, c);
+
       Expression expr = parseExpression();
       consumeSemicolon();
-      return new ExpressionStatement(expr, r, c);
+      return flag ? new ReturnStatement(expr, r, c) : new ExpressionStatement(expr, r, c);
     }
 
     private Expression parseExpression()
@@ -226,12 +293,7 @@ namespace Lab2
     {
       Expression expr = parseTerm();
 
-      while (
-        match(TokenType.LT)   ||
-        match(TokenType.LTEQ) ||
-        match(TokenType.RT)   || 
-        match(TokenType.RTEQ)
-      )
+      while (match(TokenType.LT) || match(TokenType.LTEQ) || match(TokenType.RT) || match(TokenType.RTEQ))
       {
         TokenType op = prev().TokType;
         Expression right = parseTerm();
@@ -307,6 +369,13 @@ namespace Lab2
       if (match(TokenType.ID))
       {
         Token name = prev();
+
+        if (match(TokenType.LBR))
+        {
+          var list = parseCommaSplitted();
+          return new FuncCallExpression(name.Value, list);
+        }
+
         if (match(TokenType.INCR))
         {
           return new AssignExpression(
@@ -331,7 +400,13 @@ namespace Lab2
           );
         }
 
-        return new VariableExpression(prev().Value);
+        if (match(TokenType.DOUBLEDOT))
+        {
+          var type = consume([TokenType.BOOLTYPE, TokenType.STRTYPE, TokenType.NUMTYPE], "Type declaration expected");
+          return new TypedVariableExpression(name.Value, type.TokType);
+        }
+
+        return new VariableExpression(name.Value);
       }
 
       if (match(TokenType.LBR))
