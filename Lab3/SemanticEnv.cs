@@ -11,7 +11,7 @@ namespace Lab3
       vars = [];
     }
 
-    public bool defineVar(string name, bool isInitialized, DataType? type)
+    public bool defineVar(string name, bool isInitialized, DataType? type, bool isArray = false, DataType elemType = DataType.UNKNOWN)
     {
       if (isVarDefined(name))
       {
@@ -21,6 +21,8 @@ namespace Lab3
       vars[name] = new VarInfo {
         name = name,
         isInited = isInitialized,
+        isArray = isArray,
+        elementType = elemType,
         type = type ?? DataType.UNKNOWN
       };
       
@@ -40,6 +42,7 @@ namespace Lab3
     public void setInited(string name, DataType type)
     {
       getVar(name)?.isInited = true;
+      if (getVar(name)?.isArray == true) getVar(name)?.elementType = type;
       getVar(name)?.type = type;
     }
 
@@ -55,5 +58,7 @@ namespace Lab3
     public DataType type { get; set; } = DataType.UNKNOWN;
     public bool isInited { get; set; }
     public bool isUsed { get; set; }
+    public bool isArray { get; set; }
+    public DataType elementType { get; set; }
   }
 }

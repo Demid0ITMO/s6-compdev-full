@@ -25,12 +25,14 @@ namespace Lab2
   {
     public string name { get; }
     public TokenType postype { get; }
+    public bool isArray { get; }
     public Expression? initializer { get; }
 
-    public VarStatement(string name, TokenType postype, Expression? init, int r, int c) : base(r, c)
+    public VarStatement(string name, TokenType postype, bool isArray, Expression? init, int r, int c) : base(r, c)
     {
       this.name = name;
       this.postype = postype;
+      this.isArray = isArray;
       initializer = init;
     }
   }

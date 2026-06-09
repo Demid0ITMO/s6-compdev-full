@@ -69,7 +69,7 @@ namespace Lab2
 
     private Statement parseDeclaration()
     {
-      if (match(TokenType.VAR) || match(TokenType.BOOLTYPE) || match(TokenType.NUMTYPE) || match(TokenType.STRTYPE)) return parseVar();
+      if (match(TokenType.VAR) || match(TokenType.BOOLTYPE) || match(TokenType.NUMTYPE) || match(TokenType.STRTYPE) || match(TokenType.ARRAY)) return parseVar();
       else if (match(TokenType.FUNC)) return parseFuncDeclaration();
       else return parseStatement();
     }
@@ -121,15 +121,31 @@ namespace Lab2
     private Statement parseVar()
     {
       Token postype = prev();
-      Token name = consume(TokenType.ID, "Var name expected");
-      Expression? init = null;
-      if (match(TokenType.EQ))
-      {
-        init = parseExpression();
-      }
 
-      consumeSemicolon();
-      return new VarStatement(name.Value, postype.TokType, init, name.Row, name.Column);
+      if (postype.TokType == TokenType.ARRAY) {
+        TokenType elemType = TokenType.VAR;
+        if (match(TokenType.NUMTYPE) || match(TokenType.STRTYPE) || match(TokenType.BOOLTYPE) || match(TokenType.VAR)) {
+          elemType = prev().TokType;
+        }
+  
+        Token name = consume(TokenType.ID, "Array name expected");
+        consume(TokenType.EQ, "'=' expected");
+        
+        Expression init = parseExpression();
+        
+        consumeSemicolon();
+        return new VarStatement(name.Value, elemType, true, init, name.Row, name.Column);
+      } else {
+        Token name = consume(TokenType.ID, "Var name expected");
+        Expression? init = null;
+        if (match(TokenType.EQ))
+        {
+          init = parseExpression();
+        }
+
+        consumeSemicolon();
+        return new VarStatement(name.Value, postype.TokType, false, init, name.Row, name.Column);
+      }
     }
 
     private Statement parseStatement()
@@ -236,12 +252,10 @@ namespace Lab2
         Token equals = prev();
         Expression value = recursiveParse();
 
-        if (expr is VariableExpression varExpr)
-        {
-          return new AssignExpression(varExpr.name, value);
-        }
+        if (expr is VariableExpression varExpr) return new AssignExpression(varExpr.name, value);
+        else if (expr is ArrayIndexExpression arrIdx) return new AssignExpression(arrIdx, value);
 
-        throw new Exception($"Syntax error [{equals.Row}]: left expression must be variable");
+        throw new Exception($"Syntax error [{equals.Row}]: left expression must be variable or array element");
       }
 
       return expr;
@@ -370,6 +384,13 @@ namespace Lab2
       {
         Token name = prev();
 
+        if (match(TokenType.LBRACKET))
+        {
+          Expression index = parseExpression();
+          consume(TokenType.RBRACKET, "']' expected");
+          return new ArrayIndexExpression(name.Value, index);
+        }
+
         if (match(TokenType.LBR))
         {
           var list = parseCommaSplitted();
@@ -407,6 +428,19 @@ namespace Lab2
         }
 
         return new VariableExpression(name.Value);
+      }
+
+      if (match(TokenType.LBRACKET))
+      {
+        var elements = new List<Expression>();
+        if (!match(TokenType.RBRACKET)) {
+          do {
+            elements.Add(parseExpression());
+          } while (match(TokenType.COMMA));
+          
+          consume(TokenType.RBRACKET, "']' expected");
+        }
+        return new ArrayLiteralExpression(elements);
       }
 
       if (match(TokenType.LBR))

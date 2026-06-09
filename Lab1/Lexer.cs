@@ -21,7 +21,8 @@ namespace Lab1
       ["return"] = TokenType.RETURN,
       ["double"] = TokenType.NUMTYPE,
       ["string"] = TokenType.STRTYPE,
-      ["boolean"] = TokenType.BOOLTYPE
+      ["boolean"] = TokenType.BOOLTYPE,
+      ["array"] = TokenType.ARRAY,
     };
 
     private static readonly Dictionary<string, TokenType> operators = new()
@@ -49,6 +50,8 @@ namespace Lab1
       [";"] = TokenType.SEMICOLON,
       [","] = TokenType.COMMA,
       [":"] = TokenType.DOUBLEDOT,
+      ["["] = TokenType.LBRACKET,
+      ["]"] = TokenType.RBRACKET,
     };
 
     public List<Token> extract()

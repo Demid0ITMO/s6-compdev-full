@@ -23,7 +23,7 @@ namespace Lab2
       switch (node)
       {
         case VarStatement v:
-          Console.WriteLine($"VarStatement [{v.row}:{v.column}]: {v.name}");
+          Console.WriteLine($"VarStatement [{v.row}:{v.column}]: {(v.isArray ? "array " : "")}{v.name}");
           if (v.initializer != null) PrintNode(v.initializer, childIndent, true);
           break;
 
@@ -108,6 +108,16 @@ namespace Lab2
         case FuncCallExpression fc:
           Console.WriteLine($"Function '{fc.name}' called with args");
           for (int i = 0; i < fc.args.Count; i++) PrintNode(fc.args[i], childIndent, i + 1 == fc.args.Count);
+          break;
+
+        case ArrayLiteralExpression ale:
+          var elements = "";
+          ale.elements.ForEach(e => { elements += e + ", "; });
+          Console.WriteLine($"Array [{elements.Substring(0, elements.Length - 2)}]");
+          break;
+
+        case ArrayIndexExpression aie:
+          Console.WriteLine($"Array element {aie.arrayName}[{aie.index}]");
           break;
 
         default:

@@ -28,7 +28,7 @@ namespace Lab7
 
         case VarStatement vs:
           var init = vs.initializer != null ? visitExpression(vs.initializer) : null;
-          return new VarStatement(vs.name, vs.postype, init, vs.row, vs.column);
+          return new VarStatement(vs.name, vs.postype, vs.isArray, init, vs.row, vs.column);
 
         case BlockStatement bs:
           var newStmts = new List<Statement>();

@@ -19,6 +19,8 @@ namespace Lab5
 
     private readonly Dictionary<String, FuncEnv> functions = [];
 
+    private readonly Dictionary<String, bool> isArrayVar = [];
+
     public RuntimeEnv(RuntimeEnv? par = null)
     {
       parent = par;
@@ -35,9 +37,17 @@ namespace Lab5
       else return variable;
     }
 
-    public void setVar(String name, Object? value)
+    public void setVar(String name, Object? value, bool isArray = false)
     {
       variables[name] = value;
+      if (isArray) isArrayVar[name] = true;
+    }
+
+    public bool isArray(String name)
+    {
+      if (isArrayVar.ContainsKey(name)) return true;
+      if (parent != null) return parent.isArray(name);
+      return false;
     }
 
     public FuncEnv? getFunc(String name)
@@ -79,8 +89,28 @@ namespace Lab5
         case StringExpression s: return s.value;
         case BooleanExpression b: return b.value;
         case VariableExpression v: return runtimeEnv.getVar(v.name) ?? throw new Exception($"Unable to find variable '{v.name}'");
-        case AssignExpression a: 
-          runtimeEnv.setVar(a.name, evaluateExpression(a.value));
+        case AssignExpression assign:
+          var val = evaluateExpression(assign.value);
+          if (assign.target is VariableExpression varTarget) {
+            runtimeEnv.setVar(varTarget.name, val);
+          } else if (assign.target is ArrayIndexExpression arrTarget) {
+            var arrObj2 = runtimeEnv.getVar(arrTarget.arrayName) ?? throw new Exception($"Array '{arrTarget.arrayName}' is not defined");
+            
+            if (!runtimeEnv.isArray(arrTarget.arrayName)) throw new Exception($"'{arrTarget.arrayName}' is not an array");
+
+            var list2 = arrObj2 as List<object> ?? throw new Exception($"'{arrTarget.arrayName}' is not a list");
+            
+            var idxObj2 = evaluateExpression(arrTarget.index);
+            if (idxObj2 is not double idxVal2) throw new Exception("Array index must be a number");
+            
+            int index2 = (int)idxVal2;
+            if (index2 < 0) throw new Exception($"Index {index2} out of bounds for array '{arrTarget.arrayName}'");
+            
+            while (list2.Count <= index2) list2.Add(null);
+            list2[index2] = val;
+          } else {
+            throw new Exception($"Invalid assignment target");
+          }
           return new object();
         case BinaryExpression b: 
           var first = evaluateExpression(b.first);
@@ -137,7 +167,7 @@ namespace Lab5
           var newEnv = new RuntimeEnv(prevEnv);
           for(int i = 0; i < func.args.Count; i++) {
             var arg = func.args[i];
-            var val = evaluateExpression(fc.args[i]);
+            val = evaluateExpression(fc.args[i]);
             if (arg.type == TokenType.BOOLTYPE) val = (bool)val;
             if (arg.type == TokenType.STRTYPE) val = (string)val;
             if (arg.type == TokenType.NUMTYPE) val = (double)val;
@@ -154,6 +184,24 @@ namespace Lab5
             runtimeEnv = prevEnv;
           }
           return retVal;
+
+        case ArrayIndexExpression aIdx:
+          var arrObj = runtimeEnv.getVar(aIdx.arrayName);
+          if (arrObj is not List<object> list) throw new Exception($"'{aIdx.arrayName}' is not an array");
+          
+          var idxObj = evaluateExpression(aIdx.index);
+          if (idxObj is not double idxVal) throw new Exception("Index must be a number");
+          
+          int index = (int)idxVal;
+          if (index < 0 || index >= list.Count) throw new Exception($"Index {index} out of bounds for array '{aIdx.arrayName}'");
+          
+          return list[index];
+
+        case ArrayLiteralExpression arrLit:
+          list = new List<object>();
+          foreach (var el in arrLit.elements) list.Add(evaluateExpression(el));
+          return list;
+
         default: throw new Exception($"Unknown expression");
       }
     }
@@ -171,8 +219,13 @@ namespace Lab5
             Console.WriteLine(o);
             return;
           case VarStatement v:
-            if (v.initializer == null) runtimeEnv.setVar(v.name, null);
-            else runtimeEnv.setVar(v.name, evaluateExpression(v.initializer));
+            if (v.initializer == null) {
+              if (v.isArray) runtimeEnv.setVar(v.name, new List<object>(), true);
+              else runtimeEnv.setVar(v.name, null);
+            } else {
+              var val = evaluateExpression(v.initializer);
+              runtimeEnv.setVar(v.name, val, v.isArray);
+            }
             return;
           case BlockStatement b:
             foreach (Statement st in b.statements) executeStatement(st);

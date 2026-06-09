@@ -95,18 +95,26 @@ namespace Lab2
 
   public class AssignExpression : Expression
   {
-    public string name { get; }
+    public Expression target { get; }
     public Expression value { get; }
 
     public AssignExpression(string name, Expression val)
     {
-      this.name = name;
+      target = new VariableExpression(name);
       value = val;
     }
 
-    override public String ToString()
+    public AssignExpression(ArrayIndexExpression arrIdx, Expression val)
     {
-      return $"{name} = {value}";
+      target = arrIdx;
+      value = val;
+    }
+
+    public string name => (target as VariableExpression)?.name ?? "";
+
+    override public string ToString()
+    {
+      return $"{target} = {value}";
     }
   }
 
@@ -129,6 +137,31 @@ namespace Lab2
         if (args.Count != i + 1) argsLine += ", ";
       }
       return $"{name} ({argsLine})";
+    }
+  }
+
+  public class ArrayIndexExpression : Expression
+  {
+    public string arrayName { get; }
+    public Expression index { get; }
+    public ArrayIndexExpression(string name, Expression idx)
+    {
+      arrayName = name;
+      index = idx;
+    }
+    override public string ToString() => $"{arrayName}[{index}]";
+  }
+
+  public class ArrayLiteralExpression : Expression
+  {
+    public List<Expression> elements { get; }
+    public ArrayLiteralExpression(List<Expression> elems)
+    {
+      elements = elems;
+    }
+    override public string ToString()
+    {
+      return "[" + string.Join(", ", elements) + "]";
     }
   }
 }

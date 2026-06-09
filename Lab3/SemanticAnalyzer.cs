@@ -82,6 +82,8 @@ namespace Lab3
             case BinaryExpression b: return analyzeBinaryExpression(b, r, c);
             case UnaryExpression u: return analyzeUnaryExpression(u, r, c);
             case FuncCallExpression f: return analyzeFuncCallExpression(f, r, c);
+            case ArrayIndexExpression ai: return analyzeArrayIndexExpression(ai, r, c);
+            case ArrayLiteralExpression al: return analyzeArrayLiteralExpression(al, r, c);
             default:
                 errs.Add(new SemanticErr($"Unsupported expression {expression.GetType().Name}", r, c));
                 return DataType.VOID;
@@ -121,17 +123,36 @@ namespace Lab3
 
     private void analyzeVarStatement(VarStatement stmt)
     {
-        if (!env.defineVar(stmt.name, false, stmt.postype == TokenType.VAR ? null : typeCheck[stmt.postype]))
+        DataType declaredType = stmt.postype == TokenType.VAR ? DataType.UNKNOWN : typeCheck[stmt.postype];
+        bool isArray = stmt.isArray;
+        DataType elemType = isArray ? declaredType : DataType.UNKNOWN;
+
+        if (!env.defineVar(stmt.name, false, declaredType, isArray, elemType))
         {
             if (env.getVar(stmt.name)?.isInited ?? false) errs.Add(new SemanticErr($"Var '{stmt.name}' already defined", stmt.row, stmt.column));
             else errs.Add(new SemanticErr($"Var '{stmt.name}' already declared", stmt.row, stmt.column));
         }
         else if (stmt.initializer != null)
         {
-            var type = visitExpr(stmt.initializer, stmt.row, stmt.column);
-            if (stmt.postype == TokenType.VAR) env.setInited(stmt.name, type);
-            else if (typeCheck[stmt.postype] == type) env.setInited(stmt.name, type);
-            else errs.Add(new SemanticErr($"Var must be {typeCheck[stmt.postype]}, but assigned value has type {type}", stmt.row, stmt.column));
+            var initType = visitExpr(stmt.initializer, stmt.row, stmt.column);
+            if (!isArray) {
+                if (stmt.postype == TokenType.VAR) env.setInited(stmt.name, initType);
+                else if (typeCheck[stmt.postype] == initType) env.setInited(stmt.name, initType);
+                else errs.Add(new SemanticErr($"Var must be {typeCheck[stmt.postype]}, but assigned value has type {initType}", stmt.row, stmt.column));
+            } else if (stmt.isArray) {
+                if (stmt.initializer is ArrayLiteralExpression arrLit) {
+                    DataType inferredType = declaredType;
+                    if (inferredType == DataType.UNKNOWN && arrLit.elements.Count > 0) inferredType = visitExpr(arrLit.elements[0], stmt.row, stmt.column);
+                    
+                    foreach (var el in arrLit.elements) {
+                        var elType = visitExpr(el, stmt.row, stmt.column);
+                        if (inferredType != DataType.UNKNOWN && elType != inferredType) errs.Add(new SemanticErr($"Array element type mismatch: expected {inferredType}, got {elType}", stmt.row, stmt.column));
+                    }
+                    env.setInited(stmt.name, inferredType);
+                } else {
+                    errs.Add(new SemanticErr($"Array '{stmt.name}' must be initialized with an array literal", stmt.row, stmt.column));
+                }
+            }
         }
     }
 
@@ -231,15 +252,33 @@ namespace Lab3
     {
         DataType type = visitExpr(expr.value, r, c);
 
-        if (!env.isVarDefined(expr.name))
-        {
-            errs.Add(new SemanticErr($"Var '{expr.name}' is undeclared", r, c));
-        }
-        else
-        {
-            var v = env.getVar(expr.name);
-            if ((v?.isInited ?? false) && (type != v.type)) errs.Add(new SemanticErr($"Var '{expr.name}' has type '{v.type}', but assigned expression has type '{type}'", r, c));
-            else if (type != DataType.UNKNOWN) env.setInited(expr.name, type);
+        if (expr.target is VariableExpression varTarget) {
+            string name = varTarget.name;
+            if (!env.isVarDefined(name)) {
+                errs.Add(new SemanticErr($"Var '{name}' is undeclared", r, c));
+            } else {
+                var v = env.getVar(name);
+                if ((v?.isInited ?? false) && (type != v.type)) errs.Add(new SemanticErr($"Var '{name}' has type '{v.type}', but assigned expression has type '{type}'", r, c));
+                else if (type != DataType.UNKNOWN) env.setInited(name, type);
+            }
+        } else if (expr.target is ArrayIndexExpression arrTarget) {
+            string arrName = arrTarget.arrayName;
+            if (!env.isVarDefined(arrName)) {
+                errs.Add(new SemanticErr($"Array '{arrName}' is undeclared", r, c));
+            } else {
+                var arrInfo = env.getVar(arrName);
+                if (arrInfo == null) return DataType.VOID;
+                if (!arrInfo.isArray) {
+                    errs.Add(new SemanticErr($"'{arrName}' is not an array", r, c));
+                } else {
+                    DataType idxType = visitExpr(arrTarget.index, r, c);
+                    if (idxType != DataType.NUM) errs.Add(new SemanticErr($"Array index must be numeric, got {idxType}", r, c));
+                    if (type != arrInfo.elementType) errs.Add(new SemanticErr($"Array '{arrName}' expects element type {arrInfo.elementType}, but assigned value has type {type}", r, c));
+                    arrInfo.isUsed = true;
+                }
+            }
+        } else {
+            errs.Add(new SemanticErr($"Left side of assignment must be a variable or array element", r, c));
         }
 
         return DataType.VOID;
@@ -357,6 +396,38 @@ namespace Lab3
         if (expr.oper == TokenType.NON && t == DataType.BOOL) return DataType.BOOL;
         errs.Add(new SemanticErr($"Unsupported operation {expr.oper} with {t}", r, c));
         return DataType.UNKNOWN;
+    }
+
+    private DataType analyzeArrayIndexExpression(ArrayIndexExpression expr, int r, int c)
+    {
+        var symbol = env.getVar(expr.arrayName);
+        if (symbol == null) {
+            errs.Add(new SemanticErr($"Array '{expr.arrayName}' is undeclared", r, c));
+            return DataType.UNKNOWN;
+        }
+        if (!symbol.isArray) {
+            errs.Add(new SemanticErr($"'{expr.arrayName}' is not an array", r, c));
+            return DataType.UNKNOWN;
+        }
+        
+        symbol.isUsed = true;
+        var idxType = visitExpr(expr.index, r, c);
+        if (idxType != DataType.NUM) errs.Add(new SemanticErr($"Array index must be numeric", r, c));
+        return symbol.elementType;
+    }
+
+    private DataType analyzeArrayLiteralExpression(ArrayLiteralExpression expr, int r, int c)
+    {
+        DataType commonType = DataType.UNKNOWN;
+        foreach (var el in expr.elements) {
+            var t = visitExpr(el, r, c);
+            if (commonType == DataType.UNKNOWN) commonType = t;
+            else if (t != commonType) {
+                errs.Add(new SemanticErr($"Array literal contains elements of different types", r, c));
+                commonType = DataType.UNKNOWN;
+            }
+        }
+        return commonType;
     }
   }
 }
