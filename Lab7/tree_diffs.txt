@@ -1,0 +1,111 @@
+Root (Program)							Root (Program)
+├── VarStatement [1:8]: a					├── VarStatement [1:8]: a
+│   └── BinaryExpression: PLUS				      |	│   └── Number: 14
+│       ├── Number: 2					      <
+│       └── BinaryExpression: MUL			      <
+│           ├── Number: 3				      <
+│           └── Number: 4				      <
+├── VarStatement [2:8]: b					├── VarStatement [2:8]: b
+│   └── BinaryExpression: DIV					│   └── BinaryExpression: DIV
+│       ├── BinaryExpression: MINUS			      |	│       ├── Number: 5
+│       │   ├── Number: 10				      <
+│       │   └── Number: 5				      <
+│       └── Number: 2						│       └── Number: 2
+├── VarStatement [3:5]: c					├── VarStatement [3:5]: c
+│   └── BinaryExpression: AND				      |	│   └── Boolean: False
+│       ├── BinaryExpression: RT			      <
+│       │   ├── Number: 5				      <
+│       │   └── Number: 3				      <
+│       └── BinaryExpression: LT			      <
+│           ├── Number: 2				      <
+│           └── Number: 1				      <
+├── VarStatement [4:5]: d					├── VarStatement [4:5]: d
+│   └── BinaryExpression: OR				      |	│   └── Boolean: False
+│       ├── UnaryExpression: NON			      <
+│       │   └── Boolean: True				      <
+│       └── Boolean: False				      <
+├── VarStatement [5:8]: e					├── VarStatement [5:8]: e
+│   └── BinaryExpression: PLUS				      |	│   └── String: Hello, world
+│       ├── String: Hello, 				      <
+│       └── String: world				      <
+├── VarStatement [7:8]: x					├── VarStatement [7:8]: x
+│   └── Number: 42						│   └── Number: 42
+├── VarStatement [8:8]: y					├── VarStatement [8:8]: y
+│   └── BinaryExpression: PLUS					│   └── BinaryExpression: PLUS
+│       ├── Variable: x						│       ├── Variable: x
+│       └── Number: 0						│       └── Number: 0
+├── VarStatement [9:8]: z					├── VarStatement [9:8]: z
+│   └── BinaryExpression: MUL					│   └── BinaryExpression: MUL
+│       ├── Variable: x						│       ├── Variable: x
+│       └── Number: 1						│       └── Number: 1
+├── VarStatement [10:8]: w					├── VarStatement [10:8]: w
+│   └── BinaryExpression: MUL					│   └── BinaryExpression: MUL
+│       ├── Variable: x						│       ├── Variable: x
+│       └── Number: 0						│       └── Number: 0
+├── VarStatement [11:5]: t					├── VarStatement [11:5]: t
+│   └── BinaryExpression: AND					│   └── BinaryExpression: AND
+│       ├── Boolean: True					│       ├── Boolean: True
+│       └── BinaryExpression: RT				│       └── BinaryExpression: RT
+│           ├── Variable: x					│           ├── Variable: x
+│           └── Number: 10					│           └── Number: 10
+├── VarStatement [12:5]: f					├── VarStatement [12:5]: f
+│   └── BinaryExpression: OR					│   └── BinaryExpression: OR
+│       ├── Boolean: False					│       ├── Boolean: False
+│       └── BinaryExpression: LT				│       └── BinaryExpression: LT
+│           ├── Variable: x					│           ├── Variable: x
+│           └── Number: 30					│           └── Number: 30
+├── FuncDeclarationStatement [14:5]: testReturn()		├── FuncDeclarationStatement [14:5]: testReturn()
+│   └── BlockStatement [19:1]					│   └── BlockStatement [19:1]
+│       ├── PrintStatement [15:5]				│       ├── PrintStatement [15:5]
+│       │   └── String: start					│       │   └── String: start
+│       ├── ReturnStatement [16:5]			      |	│       └── ReturnStatement [16:5]
+│       │   └── Number: 123				      |	│           └── Number: 123
+│       ├── PrintStatement [17:5]			      |	├── BlockStatement [21:11]
+│       │   └── String: dead				      |	│   └── PrintStatement [22:5]
+│       └── VarStatement [18:9]: deadVar		      |	│       └── String: always printed
+│           └── Number: 999				      <
+├── IfStatement [21:1]					      <
+│   ├── Boolean: True					      <
+│   ├── BlockStatement [21:11]				      <
+│   │   └── PrintStatement [22:5]			      <
+│   │       └── String: always printed			      <
+│   └── BlockStatement [23:8]				      <
+│       └── PrintStatement [24:5]			      <
+│           └── String: never printed			      <
+├── IfStatement [27:1]					      <
+│   ├── Boolean: False					      <
+│   └── BlockStatement [27:12]				      <
+│       └── PrintStatement [28:3]			      <
+│           └── String: never printed			      <
+├── WhileStatement [31:1]				      <
+│   ├── Boolean: False					      <
+│   └── BlockStatement [31:15]				      <
+│       └── PrintStatement [32:5]			      <
+│           └── String: infinite loop?			      <
+├── VarStatement [35:5]: flipped				├── VarStatement [35:5]: flipped
+│   └── UnaryExpression: NON				      |	│   └── Boolean: True
+│       └── UnaryExpression: NON			      <
+│           └── Boolean: True				      <
+├── VarStatement [36:8]: negneg					├── VarStatement [36:8]: negneg
+│   └── UnaryExpression: MINUS				      |	│   └── Number: 42
+│       └── UnaryExpression: MINUS			      <
+│           └── Number: 42				      <
+├── FuncDeclarationStatement [38:5]: constCalc()		├── FuncDeclarationStatement [38:5]: constCalc()
+│   └── BlockStatement [40:1]					│   └── BlockStatement [40:1]
+│       └── ReturnStatement [39:5]				│       └── ReturnStatement [39:5]
+│           └── BinaryExpression: MINUS			      |	│           └── Number: 45
+│               ├── BinaryExpression: MUL		      <
+│               │   ├── Number: 10			      <
+│               │   └── BinaryExpression: PLUS		      <
+│               │       ├── Number: 2			      <
+│               │       └── Number: 3			      <
+│               └── Number: 5				      <
+├── VarStatement [42:8]: result					├── VarStatement [42:8]: result
+│   └── Function 'constCalc' called with args			│   └── Function 'constCalc' called with args
+├── PrintStatement [43:1]					├── PrintStatement [43:1]
+│   └── Variable: result					│   └── Variable: result
+├── VarStatement [45:5]: unused					├── VarStatement [45:5]: unused
+│   └── Number: 100						│   └── Number: 100
+├── VarStatement [46:5]: unusedNoInit				├── VarStatement [46:5]: unusedNoInit
+└── PrintStatement [48:1]					└── PrintStatement [48:1]
+    └── String: Optimization test finished			    └── String: Optimization test finished
