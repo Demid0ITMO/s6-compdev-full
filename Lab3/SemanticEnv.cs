@@ -11,7 +11,7 @@ namespace Lab3
       vars = [];
     }
 
-    public bool defineVar(string name, bool isInitialized, DataType? type, bool isArray = false, DataType elemType = DataType.UNKNOWN)
+    public bool defineVar(int r, int c, string name, bool isInitialized, DataType? type, bool isArray = false, bool isFunc = false, DataType elemType = DataType.UNKNOWN)
     {
       if (isVarDefined(name))
       {
@@ -22,8 +22,11 @@ namespace Lab3
         name = name,
         isInited = isInitialized,
         isArray = isArray,
+        isFunc = isFunc,
         elementType = elemType,
-        type = type ?? DataType.UNKNOWN
+        type = type ?? DataType.UNKNOWN,
+        row = r,
+        column = c
       };
       
       return true;
@@ -59,6 +62,10 @@ namespace Lab3
     public bool isInited { get; set; }
     public bool isUsed { get; set; }
     public bool isArray { get; set; }
+
+    public bool isFunc { get; set; }
     public DataType elementType { get; set; }
+    public int row { get; set; }
+    public int column { get; set; }
   }
 }

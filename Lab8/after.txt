@@ -1,0 +1,116 @@
+Root (Program)
+├── VarStatement [1:5]: x
+│   └── Number: 10
+├── VarStatement [2:5]: y
+│   └── Number: 20
+├── VarStatement [3:5]: sum
+│   └── BinaryExpression: PLUS
+│       ├── Variable: x
+│       └── Variable: y
+├── PrintStatement [4:1]
+│   └── BinaryExpression: PLUS
+│       ├── String: sum = 
+│       └── Variable: sum
+├── IfStatement [6:1]
+│   ├── BinaryExpression: RT
+│   │   ├── Variable: sum
+│   │   └── Number: 25
+│   ├── BlockStatement [6:15]
+│   │   └── PrintStatement [7:5]
+│   │       └── String: sum > 25
+│   └── BlockStatement [8:8]
+│       └── PrintStatement [9:5]
+│           └── String: sum <= 25
+├── VarStatement [12:5]: i
+│   └── Number: 5
+├── WhileStatement [13:1]
+│   ├── BinaryExpression: RT
+│   │   ├── Variable: i
+│   │   └── Number: 0
+│   └── BlockStatement [13:15]
+│       ├── PrintStatement [14:5]
+│       │   └── Variable: i
+│       └── ExpressionStatement [15:5]
+│           └── AssignExpression: i =
+│               └── BinaryExpression: MINUS
+│                   ├── Variable: i
+│                   └── Number: 1
+├── VarStatement [18:7]: array a
+│   └── Array [1, 2, 3, 4]
+├── ExpressionStatement [19:1]
+│   └── AssignExpression:  =
+│       └── BinaryExpression: MUL
+│           ├── Array element a[1]
+│           └── Number: 10
+├── PrintStatement [20:1]
+│   └── BinaryExpression: PLUS
+│       ├── String: a[2] = 
+│       └── Array element a[2]
+├── VarStatement [22:7]: array words
+│   └── Array [hello, world]
+├── ExpressionStatement [23:1]
+│   └── AssignExpression:  =
+│       └── BinaryExpression: PLUS
+│           ├── Array element words[1]
+│           └── String: !!!
+├── PrintStatement [24:1]
+│   └── BinaryExpression: PLUS
+│       ├── BinaryExpression: PLUS
+│       │   ├── Array element words[0]
+│       │   └── String:  
+│       └── Array element words[1]
+├── FuncDeclarationStatement [26:5]: add(NameTypePair { name = a, type = NUMTYPE }, NameTypePair { name = b, type = NUMTYPE })
+│   └── BlockStatement [28:1]
+│       └── ReturnStatement [27:5]
+│           └── BinaryExpression: PLUS
+│               ├── Variable: a
+│               └── Variable: b
+├── PrintStatement [29:1]
+│   └── BinaryExpression: PLUS
+│       ├── String: add(5,7) = 
+│       └── Function 'add' called with args
+│           ├── Number: 5
+│           └── Number: 7
+├── FuncDeclarationStatement [31:5]: fact(NameTypePair { name = n, type = NUMTYPE })
+│   └── BlockStatement [37:1]
+│       └── IfStatement [32:5]
+│           ├── BinaryExpression: LTEQ
+│           │   ├── Variable: n
+│           │   └── Number: 1
+│           ├── BlockStatement [32:17]
+│           │   └── ReturnStatement [33:9]
+│           │       └── Number: 1
+│           └── BlockStatement [34:12]
+│               └── ReturnStatement [35:9]
+│                   └── BinaryExpression: MUL
+│                       ├── Variable: n
+│                       └── Function 'fact' called with args
+│                           └── BinaryExpression: MINUS
+│                               ├── Variable: n
+│                               └── Number: 1
+├── PrintStatement [38:1]
+│   └── BinaryExpression: PLUS
+│       ├── String: fact(6) = 
+│       └── Function 'fact' called with args
+│           └── Number: 6
+├── FuncDeclarationStatement [40:5]: func(NameTypePair { name = n, type = NUMTYPE })
+│   └── BlockStatement [44:1]
+│       └── BlockStatement [41:13]
+│           └── ReturnStatement [42:5]
+│               └── Number: 1
+├── VarStatement [46:5]: b
+│   └── Boolean: True
+├── VarStatement [47:5]: c
+│   └── Boolean: False
+├── IfStatement [48:1]
+│   ├── BinaryExpression: AND
+│   │   ├── Variable: b
+│   │   └── UnaryExpression: NON
+│   │       └── Variable: c
+│   └── BlockStatement [48:14]
+│       └── PrintStatement [49:5]
+│           └── String: b and not c is true
+└── BlockStatement [54:8]
+    └── PrintStatement [55:3]
+        └── Function 'func' called with args
+            └── Number: 52

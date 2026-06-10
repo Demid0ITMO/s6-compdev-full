@@ -1,0 +1,13 @@
+Variables {
+- Double x : 10
+- Double y : 20
+- Double sum : 30
+- Double i : 0
+- Array a
+- Array words
+- Function add : (a : NUMTYPE, b : NUMTYPE)
+- Function fact : (n : NUMTYPE)
+- Function func : (n : NUMTYPE)
+- Boolean b : True
+- Boolean c : False
+}

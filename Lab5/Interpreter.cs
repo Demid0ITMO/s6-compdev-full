@@ -1,3 +1,6 @@
+using System.Collections;
+using System.Dynamic;
+using System.Runtime.InteropServices;
 using Lab1;
 using Lab2;
 using Lab3;
@@ -16,8 +19,6 @@ namespace Lab5
     private readonly RuntimeEnv? parent;
     
     private readonly Dictionary<String, Object?> variables = [];
-
-    private readonly Dictionary<String, FuncEnv> functions = [];
 
     private readonly Dictionary<String, bool> isArrayVar = [];
 
@@ -50,30 +51,9 @@ namespace Lab5
       return false;
     }
 
-    public FuncEnv? getFunc(String name)
-    {
-      functions.TryGetValue(name, out var func);
-      if (func == null)
-      {
-        if (parent == null) return null;
-        else return parent.getFunc(name);
-      }
-      else return func;
-    }
-
-    public void setFunc(String name, List<NameTypePair> args, BlockStatement body)
-    {
-      functions[name] = new FuncEnv(args, body);
-    }
-
     public Dictionary<String, Object?> getDict()
     {
       return variables;
-    }
-
-    public Dictionary<String, FuncEnv> getFuncDict()
-    {
-      return functions;
     }
   }
 
@@ -98,7 +78,7 @@ namespace Lab5
             
             if (!runtimeEnv.isArray(arrTarget.arrayName)) throw new Exception($"'{arrTarget.arrayName}' is not an array");
 
-            var list2 = arrObj2 as List<object> ?? throw new Exception($"'{arrTarget.arrayName}' is not a list");
+            var list2 = arrObj2 as List<object?> ?? throw new Exception($"'{arrTarget.arrayName}' is not a list");
             
             var idxObj2 = evaluateExpression(arrTarget.index);
             if (idxObj2 is not double idxVal2) throw new Exception("Array index must be a number");
@@ -119,7 +99,9 @@ namespace Lab5
           {
             switch(b.oper)
             {
-              case TokenType.PLUS: return (Double)first + (Double)second;
+              case TokenType.PLUS:
+                if (second is Double) return (Double)first + (Double)second;
+                else return ((Double)first).ToString() + (String)second;
               case TokenType.MINUS: return (Double)first - (Double)second;
               case TokenType.MUL: return (Double)first * (Double)second;
               case TokenType.DIV: 
@@ -137,7 +119,9 @@ namespace Lab5
           {
             switch(b.oper)
             {
-              case TokenType.PLUS: return (String)first + (String)second;
+              case TokenType.PLUS:
+                if (second is Double) return (String)first + ((Double)second).ToString();
+                else return (String)first + (String)second;
               case TokenType.EQEQ: return (String)first == (String)second;
               case TokenType.NONEQ: return (String)first != (String)second;
             }
@@ -159,7 +143,7 @@ namespace Lab5
           if (u.oper == TokenType.MINUS) return -(Double)value;
           throw new Exception($"Unknown unary operation");
         case FuncCallExpression fc:
-          var func = runtimeEnv.getFunc(fc.name);
+          var func = (FuncEnv?)runtimeEnv.getVar(fc.name);
           if (func == null) throw new Exception($"Function '{fc.name}' is not defined");
           if (func.args.Count != fc.args.Count) throw new Exception($"Function '{fc.name}' called with {fc.args.Count} args, but expected {func.args.Count}");
 
@@ -239,7 +223,7 @@ namespace Lab5
             while ((Boolean)evaluateExpression(w.condition)) executeStatement(w.body);
             return;
           case FuncDeclarationStatement fcs:
-            runtimeEnv.setFunc(fcs.name, fcs.args, fcs.body);
+            runtimeEnv.setVar(fcs.name, new FuncEnv(fcs.args, fcs.body));
             return;
           case ReturnStatement r:
             var re = new ReturnException();
@@ -248,7 +232,7 @@ namespace Lab5
         }
       } catch (Exception e)
       {
-        if (e is ReturnException) throw e;
+        if (e is ReturnException re) throw re;
         else
         {
           Console.ForegroundColor = ConsoleColor.Red;
@@ -265,13 +249,14 @@ namespace Lab5
       {
         if (v.Value is Double) ans += $"- Double {v.Key} : {v.Value}\n";
         else if (v.Value is String) ans += $"- String {v.Key} : \"{v.Value}\"\n";
-        else if (v.Value is Boolean) ans += $"- Boolean {v.Key} : {v.Value}\n";
+        else if (v.Value is Boolean) ans += $"- Boolean {v.Key} : {v.Value}\n"; 
+        else if (v.Value is FuncEnv fe) {
+          var argstr = "(";
+          foreach(var arg in fe.args) argstr += $"{arg.name} : {arg.type}, ";
+          ans += $"- Function {v.Key} : {argstr.Substring(0, argstr.Length - 2) + ")"}\n";
+        }
+        else if (runtimeEnv.isArray(v.Key)) ans += $"- Array {v.Key}\n";
         else ans += $"- Unknown {v.Key} : {v.Value ?? "NULL"}\n";
-      }
-      ans += "}\nFunctions {\n";
-      foreach (var f in runtimeEnv.getFuncDict())
-      {
-        ans += $"{f.Key} - argc: {f.Value.args.Count}\n";
       }
       ans += "}";
       return ans;

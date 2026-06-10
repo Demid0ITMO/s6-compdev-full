@@ -46,8 +46,12 @@ namespace Lab2
             return tokens[i++];
           }
         }
+        throw new Exception($"Syntax error [{tokens[i].Row}:{tokens[i].Column}]: {msg}");
+      } else
+      {
+        var l = tokens.Last();
+        throw new Exception($"Syntax error [{l.Row}:{l.Column}]: {msg}");
       }
-      throw new Exception($"Syntax error [{tokens[i].Row}:{tokens[i].Column}]: {msg}");
     }
 
     private void consumeSemicolon()
@@ -252,7 +256,7 @@ namespace Lab2
         Token equals = prev();
         Expression value = recursiveParse();
 
-        if (expr is VariableExpression varExpr) return new AssignExpression(varExpr.name, value);
+        if (expr is VariableExpression varExpr) return new AssignExpression(varExpr, value);
         else if (expr is ArrayIndexExpression arrIdx) return new AssignExpression(arrIdx, value);
 
         throw new Exception($"Syntax error [{equals.Row}]: left expression must be variable or array element");
@@ -400,7 +404,7 @@ namespace Lab2
         if (match(TokenType.INCR))
         {
           return new AssignExpression(
-            name.Value, 
+            new VariableExpression(name.Value),
             new BinaryExpression(
               new VariableExpression(name.Value),
               new NumberExpression(1),
@@ -412,7 +416,7 @@ namespace Lab2
         if (match(TokenType.DECR))
         {
           return new AssignExpression(
-            name.Value, 
+            new VariableExpression(name.Value),
             new BinaryExpression(
               new VariableExpression(name.Value),
               new NumberExpression(1),

@@ -92,14 +92,14 @@ namespace Lab3
     
     private void analyzeFuncDeclarationStatement(FuncDeclarationStatement stmt)
     {
-        if(!env.defineVar(stmt.name, false, null)) errs.Add(new SemanticErr($"Function '{stmt.name}' already defined", stmt.row, stmt.column));
+        if(!env.defineVar(stmt.row, stmt.column, stmt.name, false, null, isFunc: true)) errs.Add(new SemanticErr($"Function '{stmt.name}' already defined", stmt.row, stmt.column));
         else
         {   
             var prevEnv = env;
             env = new SemanticEnv(prevEnv);
             foreach(var arg in stmt.args) {
                 typeCheck.TryGetValue(arg.type, out DataType type);
-                env.defineVar(arg.name, true, type);
+                env.defineVar(stmt.row, stmt.column, arg.name, true, type, isArray: arg.type == TokenType.ARRAY);
             }
             DataType ret = DataType.VOID;
             try {
@@ -127,10 +127,10 @@ namespace Lab3
         bool isArray = stmt.isArray;
         DataType elemType = isArray ? declaredType : DataType.UNKNOWN;
 
-        if (!env.defineVar(stmt.name, false, declaredType, isArray, elemType))
+        if (!env.defineVar(stmt.row, stmt.column, stmt.name, false, declaredType, isArray, false, elemType))
         {
-            if (env.getVar(stmt.name)?.isInited ?? false) errs.Add(new SemanticErr($"Var '{stmt.name}' already defined", stmt.row, stmt.column));
-            else errs.Add(new SemanticErr($"Var '{stmt.name}' already declared", stmt.row, stmt.column));
+            if (env.getVar(stmt.name)?.isInited ?? false) errs.Add(new SemanticErr($"Var '{stmt.name}' already defined at [{env.getVar(stmt.name)?.row}:{env.getVar(stmt.name)?.column}]", stmt.row, stmt.column));
+            else errs.Add(new SemanticErr($"Var '{stmt.name}' already declared at [{env.getVar(stmt.name)?.row}:{env.getVar(stmt.name)?.column}]", stmt.row, stmt.column));
         }
         else if (stmt.initializer != null)
         {
@@ -209,8 +209,8 @@ namespace Lab3
         {
             if (!symbol.isUsed)
             {
-                if (symbol.isInited) warns.Add(new SemanticErr($"Var '{symbol.name}' is defined, but not used", r, c));
-                else warns.Add(new SemanticErr($"Var '{symbol.name}' is declared, but not used", r, c));
+                if (symbol.isInited) warns.Add(new SemanticErr($"Var '{symbol.name}' is defined, but not used", symbol.row, symbol.column));
+                else warns.Add(new SemanticErr($"Var '{symbol.name}' is declared, but not used", symbol.row, symbol.column));
             }
         }
     }
@@ -222,6 +222,11 @@ namespace Lab3
         if (!env.isVarDefined(expr.name) || func == null) {
             errs.Add(new SemanticErr($"Function '{expr.name}' is not declared", r, c));
             return DataType.UNKNOWN;
+        }
+        if (func.isFunc == false)
+        {
+            errs.Add(new SemanticErr($"'{expr.name}' is not a function", r, c));
+            return DataType.UNKNOWN;        
         }
         
         func.isUsed = true;
@@ -237,7 +242,8 @@ namespace Lab3
             errs.Add(new SemanticErr($"Var '{expr.name}' is undeclared", r, c));
         }
         else
-        {
+        {   
+            if (symbol.isFunc) errs.Add(new SemanticErr($"'{expr.name}' is not a variable", r, c));
             symbol.isUsed = true;
 
             if (!symbol.isInited)
@@ -259,6 +265,7 @@ namespace Lab3
             } else {
                 var v = env.getVar(name);
                 if ((v?.isInited ?? false) && (type != v.type)) errs.Add(new SemanticErr($"Var '{name}' has type '{v.type}', but assigned expression has type '{type}'", r, c));
+                else if (v?.isFunc == true) errs.Add(new SemanticErr($"Can not re-assign a function '{name}'", r, c));
                 else if (type != DataType.UNKNOWN) env.setInited(name, type);
             }
         } else if (expr.target is ArrayIndexExpression arrTarget) {
@@ -322,6 +329,9 @@ namespace Lab3
 
         if (t1 != DataType.UNKNOWN && t2 != DataType.UNKNOWN) {
             if (t1 != t2) {
+                if (t1 == DataType.NUM && t2 == DataType.STR) return DataType.STR;
+                if (t2 == DataType.NUM && t1 == DataType.STR) return DataType.STR;
+
                 errs.Add(new SemanticErr($"Unsupported operation {expr.oper} between '{t1}' and '{t2}'", r, c));
                 return DataType.UNKNOWN;
             }

@@ -98,15 +98,10 @@ namespace Lab2
     public Expression target { get; }
     public Expression value { get; }
 
-    public AssignExpression(string name, Expression val)
-    {
-      target = new VariableExpression(name);
-      value = val;
-    }
 
-    public AssignExpression(ArrayIndexExpression arrIdx, Expression val)
+    public AssignExpression(Expression tar, Expression val)
     {
-      target = arrIdx;
+      target = tar;
       value = val;
     }
 

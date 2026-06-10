@@ -110,7 +110,7 @@ namespace Lab7
 
         case AssignExpression assign:
           val = visitExpression(assign.value);
-          return new AssignExpression(assign.name, val);
+          return new AssignExpression(assign.target, val);
 
         case FuncCallExpression fc:
           var newArgs = fc.args.Select(visitExpression).ToList();
@@ -141,6 +141,9 @@ namespace Lab7
           case TokenType.PLUS: return new NumberExpression(ld + rd);
           case TokenType.MINUS: return new NumberExpression(ld - rd);
           case TokenType.MUL: return new NumberExpression(ld * rd);
+          case TokenType.DIV: 
+            if (rd != 0) return new NumberExpression(ld / rd);
+            break;
           case TokenType.EQEQ: return new BooleanExpression(ld == rd);
           case TokenType.NONEQ: return new BooleanExpression(ld != rd);
           case TokenType.LT: return new BooleanExpression(ld < rd);
@@ -221,6 +224,14 @@ namespace Lab7
           if (l.value == false) return r;
           if (r.value == false) return l;
         } 
+      }
+
+      if (left is StringExpression && right is StringExpression) { // a + "" = a
+        var l = (StringExpression)left;
+        var r = (StringExpression)right;
+
+        if (l.value == "") return r;
+        if (r.value == "") return l;
       }
       
       return null;
